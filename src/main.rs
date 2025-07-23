@@ -9,8 +9,9 @@ Commands:
     init   Initialize a new fesi project in the current direcotry
 
 Optoons:
-    -h, --help    Prints the help message
-    -v, --version    Prints version informations
+    -h, --help        Prints the help message
+    -v, --version     Prints version informations
+    -m, --method      which http method to run the request with
 "#;
 
 fn main() {
