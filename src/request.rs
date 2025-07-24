@@ -1,8 +1,12 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
-use reqwest::{Client, Error, header::HeaderMap};
+use reqwest::{
+    Client, Error,
+    header::{HeaderMap, HeaderName, HeaderValue},
+};
 
 pub struct Request {
+    client: Client,
     pub method: String,
     pub endpoint: String,
     pub body: HashMap<String, String>,
@@ -10,17 +14,59 @@ pub struct Request {
 }
 
 impl Request {
+    pub async fn new(
+        method: String,
+        endpoint: String,
+        body: HashMap<String, String>,
+        header: HashMap<String, String>,
+    ) -> Self {
+        Self {
+            method,
+            endpoint,
+            body,
+            header,
+            client: Client::new(),
+        }
+    }
     pub async fn get(&self) -> Result<String, Error> {
-        let client: Client = Client::new();
         let mut headers = HeaderMap::new();
 
-        let response = client
+        let request_h = self.header.clone();
+
+        for (key, value) in request_h.into_iter() {
+            let header_name = HeaderName::from_str(&key).expect("Invalid header name");
+            let header_value = HeaderValue::from_str(&value).expect("Invalid header value");
+            headers.insert(header_name, header_value);
+        }
+        let response = self
+            .client
             .get(self.endpoint.clone())
             .headers(headers)
             .send()
-            .await?
-            .text()
             .await?;
-        Ok(response)
+
+        let result = response.text().await?;
+        Ok(result)
+    }
+    pub async fn post(&self) -> Result<String, Error> {
+        let mut headers = HeaderMap::new();
+
+        let request_h = self.header.clone();
+
+        for (key, value) in request_h.into_iter() {
+            let header_name = HeaderName::from_str(&key).expect("Invalid header name");
+            let header_value = HeaderValue::from_str(&value).expect("Invalid header value");
+            headers.insert(header_name, header_value);
+        }
+        let response = self
+            .client
+            .post(self.endpoint.clone())
+            .headers(headers)
+            .json(&self.body)
+            .send()
+            .await?;
+
+        let result = response.text().await?;
+        Ok(result)
     }
 }

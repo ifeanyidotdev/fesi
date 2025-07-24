@@ -1,7 +1,5 @@
-use std::{collections::HashMap, env, fs, path, process};
-
 use crate::request::Request;
-
+use std::{collections::HashMap, env, fs, path, process};
 pub mod request;
 
 const FESI_DIR_NAME: &str = "FESI";
@@ -60,7 +58,7 @@ Options:
     -e, --endpoint <URL>       The HTTP URL for the service to test (required)
     -b, --body <KEY=VALUE>     A key-value pair for the request body. Use multiple times for multiple values.
     -hd, --header <KEY=VALUE>  A key-value pair for the request header. Use multiple times for multiple headers.
-    -h, --help                 Prints this help message
+    -h, --help                 Prints the help message
 
 Examples:
     fesi run -m GET -e http://localhost:8080/users
@@ -156,16 +154,20 @@ Examples:
         println!("{RUN_HELP_MESSAGE}");
         process::exit(1);
     }
-    let request_value = Request {
-        method: method.clone().unwrap(),
-        endpoint: endpoint.unwrap(),
-        header: headers,
-        body,
-    };
+    let request_value = Request::new(method.clone().unwrap(), endpoint.unwrap(), body, headers);
+
     if let Some(mth) = method {
         match mth.as_str() {
-            "GET" => {
-                let res = request_value.get().await.unwrap_or_else(|err| {
+            "GET" | "get" => {
+                let res = request_value.await.get().await.unwrap_or_else(|err| {
+                    eprintln!("{err}");
+                    process::exit(1);
+                });
+                println!("{}", res.as_str());
+                process::exit(0);
+            }
+            "POST" | "post" => {
+                let res = request_value.await.post().await.unwrap_or_else(|err| {
                     eprintln!("{err}");
                     process::exit(1);
                 });
@@ -180,6 +182,8 @@ Examples:
         process::exit(1);
     }
 }
+
+// async fn handle_request(request: Request) {}
 
 fn initialize_fesi_project() {
     if path::Path::new(FESI_DIR_NAME).is_dir() {
