@@ -5,6 +5,7 @@ use reqwest::{
     header::{HeaderMap, HeaderName, HeaderValue},
 };
 
+#[derive(Debug)]
 pub struct Request {
     client: Client,
     pub method: String,
@@ -26,6 +27,15 @@ impl Request {
             body,
             header,
             client: Client::new(),
+        }
+    }
+
+    pub async fn run(&self) -> Result<String, Error> {
+        let method = self.method.clone();
+        match method.as_str() {
+            "GET" => self.get().await,
+            "POST" => self.post().await,
+            _ => panic!("Method not allowed"),
         }
     }
     pub async fn get(&self) -> Result<String, Error> {

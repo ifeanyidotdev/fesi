@@ -1,6 +1,7 @@
+mod request;
+
 use crate::request::Request;
 use std::{collections::HashMap, env, fs, path, process};
-pub mod request;
 
 const FESI_DIR_NAME: &str = "FESI";
 const FESI_HELP_MESSAGE: &str = r#"
@@ -207,7 +208,6 @@ mod test {
             fs::remove_dir_all(FESI_DIR_NAME).unwrap();
         }
     }
-
     #[test]
     fn test_initlize_fesi_success() {
         clean_up_dir();
