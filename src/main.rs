@@ -1,4 +1,4 @@
-use std::{env, fs, path, process};
+use std::{collections::HashMap, env, fs, path, process};
 
 const FESI_DIR_NAME: &str = "FESI";
 const FESI_HELP_MESSAGE: &str = r#"
@@ -20,27 +20,27 @@ fn main() {
 
     if args.len() <= 1 {
         println!("{FESI_HELP_MESSAGE}");
-        process::exit(1)
+        process::exit(1);
     }
 
-    let sub_commands = &args[2..];
-    //parse arguments
-    for arg in args.iter().skip(1) {
-        match arg.as_str() {
-            "-h" | "--help" => {
-                println!("{FESI_HELP_MESSAGE}");
-                process::exit(0)
-            }
-            "init" => {
-                initialize_fesi_project();
-            }
-            "run" => {
-                handle_run_command(sub_commands);
-            }
-            _ => {
-                println!("{FESI_HELP_MESSAGE}");
-                process::exit(0)
-            }
+    let command = &args[1];
+    let sub_commands = &args[2..].to_vec();
+
+    match command.as_str() {
+        "-h" | "--help" => {
+            println!("{FESI_HELP_MESSAGE}");
+            process::exit(0);
+        }
+        "init" => {
+            initialize_fesi_project();
+        }
+        "run" => {
+            handle_run_command(sub_commands);
+        }
+        _ => {
+            println!("Error: Unknown command '{}'", command);
+            println!("{FESI_HELP_MESSAGE}");
+            process::exit(1);
         }
     }
 }
@@ -49,53 +49,109 @@ fn handle_run_command(args: &[String]) {
     const RUN_HELP_MESSAGE: &str = r#"
 Runs testing on the endpoint provided
 
-Usage: fesi run [OPTIONS] <COMMAND>
+Usage: fesi run [OPTIONS]
 
 Options:
-    -m, --method        The HTTP method to run the test with (required)
-    -e, --endpoint      The http url for the service to test (required) 
-    -b, --body           JSON body for the request
-    -hd, --header        Request header
-    -h, --help        Prints the help message
+    -m, --method <METHOD>      The HTTP method to use (required)
+    -e, --endpoint <URL>       The HTTP URL for the service to test (required)
+    -b, --body <KEY=VALUE>     A key-value pair for the request body. Use multiple times for multiple values.
+    -hd, --header <KEY=VALUE>  A key-value pair for the request header. Use multiple times for multiple headers.
+    -h, --help                 Prints this help message
 
 Examples:
     fesi run -m GET -e http://localhost:8080/users
-    fesi run -m POST -e http://localhost:8080/data -b '{"key": "value"}' -h "Content-Type: application/json" -h "Authorization: Bearer token"
+    fesi run -m POST -e http://localhost:8080/data -b 'user=fesi' -b 'pass=supersecret' -hd 'Content-Type=application/json'
 "#;
 
-    // let mut endpoint: Option<String> = None;
-    // let mut method: Option<String> = None;
-    // let mut body: Option<HashSet<String, String>> = None;
-    // let mut header: Option<HashSet<String, String>> = None;
-    //
-    //
-    // if args.len() <= 1 {
-    //     println!("{RUN_HELP_MESSAGE}");
-    //     process::exit(1);
-    // }
+    if args.is_empty()
+        || args.contains(&String::from("-h"))
+        || args.contains(&String::from("--help"))
+    {
+        println!("{RUN_HELP_MESSAGE}");
+        process::exit(0);
+    }
 
-    for arg in args.iter() {
-        if arg == "-h" || arg == "--help" {
-            println!("Testing");
-            println!("{RUN_HELP_MESSAGE}");
-            process::exit(1);
+    let mut method: Option<String> = None;
+    let mut endpoint: Option<String> = None;
+    let mut body: HashMap<String, String> = HashMap::new();
+    let mut headers: HashMap<String, String> = HashMap::new();
+
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "-m" | "--method" => {
+                if i + 1 < args.len() {
+                    method = Some(args[i + 1].clone());
+                    i += 2;
+                } else {
+                    eprintln!("Error: Missing value for --method");
+                    process::exit(1);
+                }
+            }
+            "-e" | "--endpoint" => {
+                if i + 1 < args.len() {
+                    endpoint = Some(args[i + 1].clone());
+                    i += 2;
+                } else {
+                    eprintln!("Error: Missing value for --endpoint");
+                    process::exit(1);
+                }
+            }
+            "-b" | "--body" => {
+                if i + 1 < args.len() {
+                    let part = &args[i + 1];
+                    let mut splitter = part.splitn(2, '=');
+                    if let (Some(key), Some(value)) = (splitter.next(), splitter.next()) {
+                        body.insert(key.to_string(), value.to_string());
+                    } else {
+                        eprintln!(
+                            "Error: Invalid format for --body. Expected key=value, got '{part}'"
+                        );
+                        process::exit(1);
+                    }
+                    i += 2;
+                } else {
+                    eprintln!("Error: Missing value for --body");
+                    process::exit(1);
+                }
+            }
+            "-hd" | "--header" => {
+                if i + 1 < args.len() {
+                    let part = &args[i + 1];
+                    let mut splitter = part.splitn(2, '=');
+                    if let (Some(key), Some(value)) = (splitter.next(), splitter.next()) {
+                        headers.insert(key.to_string(), value.to_string());
+                    } else {
+                        eprintln!(
+                            "Error: Invalid format for --header. Expected key=value, got '{part}'"
+                        );
+                        process::exit(1);
+                    }
+                    i += 2;
+                } else {
+                    eprintln!("Error: Missing value for --header");
+                    process::exit(1);
+                }
+            }
+            _ => {
+                eprintln!("Error: Unknown argument '{}'", args[i]);
+                println!("{RUN_HELP_MESSAGE}");
+                process::exit(1);
+            }
         }
     }
-    //
-    // for arg in args {
-    //     let value = arg.as_str();
-    //     match value {
-    //         "-h" | "--help" => {
-    //             println!("TESTING");
-    //             println!("{RUN_HELP_MESSAGE}");
-    //             process::exit(0)
-    //         }
-    //         _ => {
-    //             println!("{RUN_HELP_MESSAGE}");
-    //             process::exit(0)
-    //         }
-    //     }
-    // }
+
+    if method.is_none() {
+        eprintln!("Error: --method is required");
+        println!("{RUN_HELP_MESSAGE}");
+        process::exit(1);
+    }
+
+    if endpoint.is_none() {
+        eprintln!("Error: --endpoint is required");
+        println!("{RUN_HELP_MESSAGE}");
+        process::exit(1);
+    }
 }
 
 fn initialize_fesi_project() {
