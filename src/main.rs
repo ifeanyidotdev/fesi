@@ -1,5 +1,9 @@
 use std::{collections::HashMap, env, fs, path, process};
 
+use crate::request::Request;
+
+pub mod request;
+
 const FESI_DIR_NAME: &str = "FESI";
 const FESI_HELP_MESSAGE: &str = r#"
 Fesi is a drop in replacement for curl
@@ -14,8 +18,8 @@ Optoons:
     -h, --help        Prints the help message
     -v, --version     Prints version informations
 "#;
-
-fn main() {
+#[tokio::main]
+async fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() <= 1 {
@@ -35,17 +39,17 @@ fn main() {
             initialize_fesi_project();
         }
         "run" => {
-            handle_run_command(sub_commands);
+            handle_run_command(sub_commands).await;
         }
         _ => {
-            println!("Error: Unknown command '{}'", command);
+            println!("Error: Unknown command '{command}'");
             println!("{FESI_HELP_MESSAGE}");
             process::exit(1);
         }
     }
 }
 
-fn handle_run_command(args: &[String]) {
+async fn handle_run_command(args: &[String]) {
     const RUN_HELP_MESSAGE: &str = r#"
 Runs testing on the endpoint provided
 
@@ -149,6 +153,29 @@ Examples:
 
     if endpoint.is_none() {
         eprintln!("Error: --endpoint is required");
+        println!("{RUN_HELP_MESSAGE}");
+        process::exit(1);
+    }
+    let request_value = Request {
+        method: method.clone().unwrap(),
+        endpoint: endpoint.unwrap(),
+        header: headers,
+        body,
+    };
+    if let Some(mth) = method {
+        match mth.as_str() {
+            "GET" => {
+                let res = request_value.get().await.unwrap_or_else(|err| {
+                    eprintln!("{err}");
+                    process::exit(1);
+                });
+                println!("{}", res.as_str());
+                process::exit(0);
+            }
+            _ => println!("Method not allowed yet"),
+        }
+    } else {
+        eprintln!("Error: --method is required");
         println!("{RUN_HELP_MESSAGE}");
         process::exit(1);
     }
