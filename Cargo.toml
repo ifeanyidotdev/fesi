@@ -4,4 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-reqwest = "0.12.22"
+reqwest = { version = "0.12", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1

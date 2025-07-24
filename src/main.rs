@@ -1,3 +1,6 @@
+mod request;
+
+use crate::request::Request;
 use std::{collections::HashMap, env, fs, path, process};
 
 const FESI_DIR_NAME: &str = "FESI";
@@ -14,8 +17,8 @@ Optoons:
     -h, --help        Prints the help message
     -v, --version     Prints version informations
 "#;
-
-fn main() {
+#[tokio::main]
+async fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() <= 1 {
@@ -35,17 +38,17 @@ fn main() {
             initialize_fesi_project();
         }
         "run" => {
-            handle_run_command(sub_commands);
+            handle_run_command(sub_commands).await;
         }
         _ => {
-            println!("Error: Unknown command '{}'", command);
+            println!("Error: Unknown command '{command}'");
             println!("{FESI_HELP_MESSAGE}");
             process::exit(1);
         }
     }
 }
 
-fn handle_run_command(args: &[String]) {
+async fn handle_run_command(args: &[String]) {
     const RUN_HELP_MESSAGE: &str = r#"
 Runs testing on the endpoint provided
 
@@ -56,7 +59,7 @@ Options:
     -e, --endpoint <URL>       The HTTP URL for the service to test (required)
     -b, --body <KEY=VALUE>     A key-value pair for the request body. Use multiple times for multiple values.
     -hd, --header <KEY=VALUE>  A key-value pair for the request header. Use multiple times for multiple headers.
-    -h, --help                 Prints this help message
+    -h, --help                 Prints the help message
 
 Examples:
     fesi run -m GET -e http://localhost:8080/users
@@ -152,7 +155,36 @@ Examples:
         println!("{RUN_HELP_MESSAGE}");
         process::exit(1);
     }
+    let request_value = Request::new(method.clone().unwrap(), endpoint.unwrap(), body, headers);
+
+    if let Some(mth) = method {
+        match mth.as_str() {
+            "GET" | "get" => {
+                let res = request_value.await.get().await.unwrap_or_else(|err| {
+                    eprintln!("{err}");
+                    process::exit(1);
+                });
+                println!("{}", res.as_str());
+                process::exit(0);
+            }
+            "POST" | "post" => {
+                let res = request_value.await.post().await.unwrap_or_else(|err| {
+                    eprintln!("{err}");
+                    process::exit(1);
+                });
+                println!("{}", res.as_str());
+                process::exit(0);
+            }
+            _ => println!("Method not allowed yet"),
+        }
+    } else {
+        eprintln!("Error: --method is required");
+        println!("{RUN_HELP_MESSAGE}");
+        process::exit(1);
+    }
 }
+
+// async fn handle_request(request: Request) {}
 
 fn initialize_fesi_project() {
     if path::Path::new(FESI_DIR_NAME).is_dir() {
@@ -176,7 +208,6 @@ mod test {
             fs::remove_dir_all(FESI_DIR_NAME).unwrap();
         }
     }
-
     #[test]
     fn test_initlize_fesi_success() {
         clean_up_dir();
