@@ -175,6 +175,15 @@ Examples:
                 println!("{}", res.as_str());
                 process::exit(0);
             }
+            "DELETE" | "delete" => {
+                let res = request_value.await.delete().await.unwrap_or_else(|err| {
+                    eprintln!("{err}");
+                    process::exit(1);
+                });
+                println!("{}", res.as_str());
+                process::exit(0);
+            }
+
             _ => println!("Method not allowed yet"),
         }
     } else {
