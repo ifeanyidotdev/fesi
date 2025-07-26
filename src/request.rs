@@ -35,6 +35,7 @@ impl Request {
         match method.as_str() {
             "GET" => self.get().await,
             "POST" => self.post().await,
+            "DELETE" => self.delete().await,
             _ => panic!("Method not allowed"),
         }
     }
@@ -73,6 +74,25 @@ impl Request {
             .post(self.endpoint.clone())
             .headers(headers)
             .json(&self.body)
+            .send()
+            .await?;
+
+        let result = response.text().await?;
+        Ok(result)
+    }
+    pub async fn delete(&self) -> Result<String, Error> {
+        let mut headers = HeaderMap::new();
+        let request_h = self.header.clone();
+
+        for (key, value) in request_h.into_iter() {
+            let header_name = HeaderName::from_str(&key).expect("Invalid header name");
+            let header_value = HeaderValue::from_str(&value).expect("Invalid header value");
+            headers.insert(header_name, header_value);
+        }
+        let response = self
+            .client
+            .delete(self.endpoint.clone())
+            .headers(headers)
             .send()
             .await?;
 
