@@ -99,4 +99,46 @@ impl Request {
         let result = response.text().await?;
         Ok(result)
     }
+    pub async fn put(self) -> Result<String, Error> {
+        let mut headers = HeaderMap::new();
+
+        let request_h = self.header.clone();
+
+        for (key, value) in request_h.into_iter() {
+            let header_name = HeaderName::from_str(&key).expect("Invalid header name");
+            let header_value = HeaderValue::from_str(&value).expect("Invalid header value");
+            headers.insert(header_name, header_value);
+        }
+        let response = self
+            .client
+            .put(self.endpoint.clone())
+            .headers(headers)
+            .json(&self.body)
+            .send()
+            .await?;
+
+        let result = response.text().await?;
+        Ok(result)
+    }
+    pub async fn patch(self) -> Result<String, Error> {
+        let mut headers = HeaderMap::new();
+
+        let request_h = self.header.clone();
+
+        for (key, value) in request_h.into_iter() {
+            let header_name = HeaderName::from_str(&key).expect("Invalid header name");
+            let header_value = HeaderValue::from_str(&value).expect("Invalid header value");
+            headers.insert(header_name, header_value);
+        }
+        let response = self
+            .client
+            .patch(self.endpoint.clone())
+            .headers(headers)
+            .json(&self.body)
+            .send()
+            .await?;
+
+        let result = response.text().await?;
+        Ok(result)
+    }
 }
