@@ -2,7 +2,7 @@ mod parser;
 mod request;
 
 use crate::request::Request;
-use std::{collections::HashMap, env, fs, path, process};
+use std::{collections::HashMap, env, fs, future::Future, path, process};
 
 const FESI_DIR_NAME: &str = "FESI";
 const FESI_HELP_MESSAGE: &str = r#"
@@ -13,8 +13,9 @@ Usage: fesi [OPTIONS] <COMMAND>
 Commands:
     init              Initialize a new fesi project in the current direcotry
     run               Run endpoint request
+    file              Run from a yaml defined file
 
-Optoons:
+Options:
     -h, --help        Prints the help message
     -v, --version     Prints version informations
 "#;
@@ -40,6 +41,24 @@ async fn main() {
         }
         "run" => {
             handle_run_command(sub_commands).await;
+        }
+        "file" => {
+            let file = sub_commands.iter().next().unwrap_or_else(|| {
+                eprintln!("No file passed");
+                process::exit(1);
+            });
+            let actions = parser::load_rest_file(file).unwrap_or_else(|error| {
+                eprintln!("{:?}", error.to_string());
+                process::exit(1);
+            });
+            let requests = parser::parse_to_request(actions).await;
+            for r in requests {
+                let result = r.run().await.unwrap_or_else(|error| {
+                    eprintln!("{:?}", error.to_string());
+                    process::exit(1);
+                });
+                println!("{result}")
+            }
         }
         _ => {
             println!("Error: Unknown command '{command}'");

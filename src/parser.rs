@@ -3,48 +3,33 @@ use std::{collections::HashMap, fs, path::Path};
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
-pub enum Method {
-    #[serde(alias = "post", alias = "POST")]
-    Post,
-    #[serde(alias = "get", alias = "GET")]
-    Get,
-    #[serde(alias = "patch", alias = "PATCH")]
-    Patch,
-    #[serde(alias = "put", alias = "PUT")]
-    Put,
-    #[serde(alias = "delete", alias = "DELETE")]
-    Delete,
-}
+use crate::request::Request;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Endpoint {
+pub struct Action {
     pub url: String,
-    pub method: Method,
-    pub header: Vec<HashMap<String, String>>,
-    pub body: Vec<HashMap<String, String>>,
+    pub method: String,
+    pub header: HashMap<String, String>,
+    pub body: HashMap<String, String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Rest {
-    endpoints: Vec<Endpoint>,
+pub fn load_rest_file<P: AsRef<Path>>(path: P) -> anyhow::Result<Vec<Action>> {
+    let path_ref = path.as_ref();
+    let file_content = fs::read_to_string(path_ref)
+        .with_context(|| format!("Could not read file: {}", path_ref.display()))?;
+
+    let actions: Vec<Action> = serde_yaml::from_str(&file_content)
+        .with_context(|| format!("Could not parse YAML from file: {}", path_ref.display()))?;
+
+    Ok(actions)
 }
 
-impl Rest {
-    pub fn load_rest_file<P: AsRef<Path>>(path: P) -> anyhow::Result<Self> {
-        let path_ref = path.as_ref();
-        let file_content = fs::read_to_string(path_ref)
-            .with_context(|| format!("Could not read config file: {}", path_ref.display()))?;
+pub async fn parse_to_request(actions: Vec<Action>) -> Vec<Request> {
+    let mut requests: Vec<Request> = Vec::new();
 
-        let rest: Rest = serde_yaml::from_str(&file_content)
-            .with_context(|| format!("Could not parse YAML from file: {}", path_ref.display()))?;
-
-        Ok(rest)
+    for act in actions {
+        let request = Request::new(act.method, act.url, act.body, act.header).await;
+        requests.push(request);
     }
-    /// Loads the configuration from a string.
-    pub fn load_from_str(content: &str) -> anyhow::Result<Self> {
-        let rest: Rest =
-            serde_yaml::from_str(content).context("Could not parse YAML from string")?;
-        Ok(rest)
-    }
+    requests
 }
