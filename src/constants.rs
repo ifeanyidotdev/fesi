@@ -5,7 +5,7 @@ Fesi is a drop in replacement for curl
 Usage: fesi [OPTIONS] <COMMAND>
 
 Commands:
-    init              Initialize a new fesi project in the current direcotry
+    init              Initialize a new fesi project in the current directory
     run               Run endpoint request
     file <FILE_PATH!> Run from a yaml defined file
 
@@ -25,6 +25,7 @@ Options:
     -e, --endpoint <URL>       The HTTP URL for the service to test (required)
     -b, --body <KEY=VALUE>     A key-value pair for the request body. Use multiple times for multiple values.
     -hd, --header <KEY=VALUE>  A key-value pair for the request header. Use multiple times for multiple headers.
+    -s, --save                 Tells Fesi to save the response to a file @  the fest directory
     -h, --help                 Prints the help message
 
 Examples:
