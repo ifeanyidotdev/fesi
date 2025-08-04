@@ -34,7 +34,15 @@ pub async fn parse_to_request(actions: Vec<Action>) -> Vec<Request> {
     let mut requests: Vec<Request> = Vec::new();
 
     for act in actions {
-        let request = Request::new(act.method, act.url, act.body, act.header, Some(act.name)).await;
+        let request = Request::new(
+            act.method,
+            act.url,
+            act.body,
+            act.header,
+            Some(act.name),
+            false,
+        )
+        .await;
         requests.push(request);
     }
     requests

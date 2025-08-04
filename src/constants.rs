@@ -7,7 +7,7 @@ Usage: fesi [OPTIONS] <COMMAND>
 Commands:
     init              Initialize a new fesi project in the current direcotry
     run               Run endpoint request
-    file              Run from a yaml defined file
+    file <FILE_PATH!> Run from a yaml defined file
 
 Options:
     -h, --help        Prints the help message

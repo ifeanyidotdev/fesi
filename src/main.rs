@@ -3,8 +3,11 @@ mod parser;
 mod request;
 mod save;
 
-use crate::{request::Request, save::save_response_to_file};
-use std::{collections::HashMap, env, fs, future::Future, path, process};
+use crate::{
+    request::Request,
+    save::{_save, save_response_to_file},
+};
+use std::{collections::HashMap, env, fs, path, process};
 
 use crate::constants::*;
 
@@ -79,6 +82,7 @@ async fn handle_run_command(args: &[String]) {
                 eprintln!("{err}");
                 process::exit(1);
             });
+            _save(request, res.clone());
             println!("{}", res.as_str());
             process::exit(0);
         }
@@ -87,6 +91,8 @@ async fn handle_run_command(args: &[String]) {
                 eprintln!("{err}");
                 process::exit(1);
             });
+            _save(request, res.clone());
+
             println!("{}", res.as_str());
             process::exit(0);
         }
@@ -95,6 +101,7 @@ async fn handle_run_command(args: &[String]) {
                 eprintln!("{err}");
                 process::exit(1);
             });
+            _save(request, res.clone());
             println!("{}", res.as_str());
             process::exit(0);
         }
@@ -103,6 +110,7 @@ async fn handle_run_command(args: &[String]) {
                 eprintln!("{err}");
                 process::exit(1);
             });
+            _save(request, res.clone());
             println!("{}", res.as_str());
             process::exit(0);
         }
@@ -111,6 +119,7 @@ async fn handle_run_command(args: &[String]) {
                 eprintln!("{err}");
                 process::exit(1);
             });
+            _save(request, res.clone());
             println!("{}", res.as_str());
             process::exit(0);
         }
@@ -122,11 +131,12 @@ async fn handle_run_command(args: &[String]) {
     }
 }
 
-fn parse_run_command(args: &[String], help_message: &str) -> impl Future<Output = Request> {
+async fn parse_run_command(args: &[String], help_message: &str) -> Request {
     let mut method: Option<String> = None;
     let mut endpoint: Option<String> = None;
     let mut body: HashMap<String, String> = HashMap::new();
     let mut headers: HashMap<String, String> = HashMap::new();
+    let mut save_response: bool = false;
 
     let mut i = 0;
     while i < args.len() {
@@ -148,6 +158,10 @@ fn parse_run_command(args: &[String], help_message: &str) -> impl Future<Output 
                     eprintln!("Error: Missing value for --endpoint");
                     process::exit(1);
                 }
+            }
+            "-s" | "--save" => {
+                save_response = true;
+                i += 2;
             }
             "-b" | "--body" => {
                 if i + 1 < args.len() {
@@ -210,7 +224,9 @@ fn parse_run_command(args: &[String], help_message: &str) -> impl Future<Output 
         body,
         headers,
         None,
+        save_response,
     )
+    .await
 }
 
 fn initialize_fesi_project() {

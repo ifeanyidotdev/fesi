@@ -13,6 +13,7 @@ pub struct Request {
     pub body: HashMap<String, String>,
     pub header: HashMap<String, String>,
     pub name: Option<String>,
+    pub save_response: bool,
 }
 
 impl Request {
@@ -22,6 +23,7 @@ impl Request {
         body: HashMap<String, String>,
         header: HashMap<String, String>,
         name: Option<String>,
+        save_response: bool,
     ) -> Self {
         Self {
             method,
@@ -30,6 +32,7 @@ impl Request {
             header,
             client: Client::new(),
             name,
+            save_response,
         }
     }
 
@@ -62,6 +65,7 @@ impl Request {
             .await?;
 
         let result = response.text().await?;
+
         Ok(result)
     }
     pub async fn post(&self) -> anyhow::Result<String, Error> {
