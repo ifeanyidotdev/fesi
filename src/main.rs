@@ -1,24 +1,13 @@
+mod constants;
 mod parser;
 mod request;
+mod save;
 
-use crate::request::Request;
+use crate::{request::Request, save::save_response_to_file};
 use std::{collections::HashMap, env, fs, future::Future, path, process};
 
-const FESI_DIR_NAME: &str = "FESI";
-const FESI_HELP_MESSAGE: &str = r#"
-Fesi is a drop in replacement for curl
+use crate::constants::*;
 
-Usage: fesi [OPTIONS] <COMMAND>
-
-Commands:
-    init              Initialize a new fesi project in the current direcotry
-    run               Run endpoint request
-    file              Run from a yaml defined file
-
-Options:
-    -h, --help        Prints the help message
-    -v, --version     Prints version informations
-"#;
 #[tokio::main]
 async fn main() {
     let args: Vec<String> = env::args().collect();
@@ -57,7 +46,10 @@ async fn main() {
                     eprintln!("{:?}", error.to_string());
                     process::exit(1);
                 });
-                println!("{result}")
+                save_response_to_file(result).unwrap_or_else(|error| {
+                    eprintln!("{:?}", error.to_string());
+                    process::exit(1);
+                });
             }
         }
         _ => {
@@ -258,7 +250,6 @@ mod test {
     #[test]
     fn test_initlize_fesi_success() {
         clean_up_dir();
-
         let result = std::panic::catch_unwind(|| {
             initialize_fesi_project();
         });

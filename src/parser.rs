@@ -13,6 +13,12 @@ pub struct Action {
     pub body: HashMap<String, String>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Rest {
+    pub name: String,
+    pub actions: Vec<Action>,
+}
+
 pub fn load_rest_file<P: AsRef<Path>>(path: P) -> anyhow::Result<Vec<Action>> {
     let path_ref = path.as_ref();
     let file_content = fs::read_to_string(path_ref)
