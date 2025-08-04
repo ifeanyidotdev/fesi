@@ -1,5 +1,5 @@
-run-test-endpoint:
-	cargo run -- run -m GET -e https://dev-api-nukord.nuxalle.com/health/ 
+endpoint:
+	cargo run -- run -m GET -e https://dev-api-nukord.nuxalle.com/health/ -s
 
 file:
-	cargo run -- file ./actions.yaml
+	cargo run -- file ./ed.yaml
