@@ -36,20 +36,21 @@ async fn main() {
                 eprintln!("No file passed");
                 process::exit(1);
             });
-            let actions = parser::load_rest_file(file).unwrap_or_else(|error| {
+            let rest: parser::Rest = parser::load_rest_file(file).unwrap_or_else(|error| {
                 eprintln!("{:?}", error.to_string());
                 process::exit(1);
             });
-            let requests = parser::parse_to_request(actions).await;
+            let requests = parser::parse_to_request(rest.actions).await;
             for r in requests {
                 let result = r.run().await.unwrap_or_else(|error| {
                     eprintln!("{:?}", error.to_string());
                     process::exit(1);
                 });
-                save_response_to_file(result).unwrap_or_else(|error| {
-                    eprintln!("{:?}", error.to_string());
-                    process::exit(1);
-                });
+                save_response_to_file(result, r.name.unwrap_or("response".to_string()))
+                    .unwrap_or_else(|error| {
+                        eprintln!("{:?}", error.to_string());
+                        process::exit(1);
+                    });
             }
         }
         _ => {
@@ -61,23 +62,6 @@ async fn main() {
 }
 
 async fn handle_run_command(args: &[String]) {
-    const RUN_HELP_MESSAGE: &str = r#"
-Runs testing on the endpoint provided
-
-Usage: fesi run [OPTIONS]
-
-Options:
-    -m, --method <METHOD>      The HTTP method to use (required)
-    -e, --endpoint <URL>       The HTTP URL for the service to test (required)
-    -b, --body <KEY=VALUE>     A key-value pair for the request body. Use multiple times for multiple values.
-    -hd, --header <KEY=VALUE>  A key-value pair for the request header. Use multiple times for multiple headers.
-    -h, --help                 Prints the help message
-
-Examples:
-    fesi run -m GET -e http://localhost:8080/users
-    fesi run -m POST -e http://localhost:8080/data -b 'user=fesi' -b 'pass=supersecret' -hd 'Content-Type=application/json'
-"#;
-
     if args.is_empty()
         || args.contains(&String::from("-h"))
         || args.contains(&String::from("--help"))
@@ -220,10 +204,14 @@ fn parse_run_command(args: &[String], help_message: &str) -> impl Future<Output 
         println!("{help_message}");
         process::exit(1);
     }
-    Request::new(method.clone().unwrap(), endpoint.unwrap(), body, headers)
+    Request::new(
+        method.clone().unwrap(),
+        endpoint.unwrap(),
+        body,
+        headers,
+        None,
+    )
 }
-
-// async fn handle_request(request: Request) {}
 
 fn initialize_fesi_project() {
     if path::Path::new(FESI_DIR_NAME).is_dir() {
@@ -259,4 +247,7 @@ mod test {
 
         clean_up_dir();
     }
+
+    #[test]
+    fn test_run_hanlde_success() {}
 }

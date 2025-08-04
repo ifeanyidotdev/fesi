@@ -12,6 +12,7 @@ pub struct Request {
     pub endpoint: String,
     pub body: HashMap<String, String>,
     pub header: HashMap<String, String>,
+    pub name: Option<String>,
 }
 
 impl Request {
@@ -20,6 +21,7 @@ impl Request {
         endpoint: String,
         body: HashMap<String, String>,
         header: HashMap<String, String>,
+        name: Option<String>,
     ) -> Self {
         Self {
             method,
@@ -27,6 +29,7 @@ impl Request {
             body,
             header,
             client: Client::new(),
+            name,
         }
     }
 
