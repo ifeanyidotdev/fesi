@@ -1,22 +1,13 @@
+mod constants;
+mod parser;
 mod request;
+mod save;
 
-use crate::request::Request;
-use std::{collections::HashMap, env, fs, path, process};
+use crate::{request::Request, save::save_response_to_file};
+use std::{collections::HashMap, env, fs, future::Future, path, process};
 
-const FESI_DIR_NAME: &str = "FESI";
-const FESI_HELP_MESSAGE: &str = r#"
-Fesi is a drop in replacement for curl
+use crate::constants::*;
 
-Usage: fesi [OPTIONS] <COMMAND>
-
-Commands:
-    init              Initialize a new fesi project in the current direcotry
-    run               Run endpoint request
-
-Optoons:
-    -h, --help        Prints the help message
-    -v, --version     Prints version informations
-"#;
 #[tokio::main]
 async fn main() {
     let args: Vec<String> = env::args().collect();
@@ -39,6 +30,27 @@ async fn main() {
         }
         "run" => {
             handle_run_command(sub_commands).await;
+        }
+        "file" => {
+            let file = sub_commands.iter().next().unwrap_or_else(|| {
+                eprintln!("No file passed");
+                process::exit(1);
+            });
+            let actions = parser::load_rest_file(file).unwrap_or_else(|error| {
+                eprintln!("{:?}", error.to_string());
+                process::exit(1);
+            });
+            let requests = parser::parse_to_request(actions).await;
+            for r in requests {
+                let result = r.run().await.unwrap_or_else(|error| {
+                    eprintln!("{:?}", error.to_string());
+                    process::exit(1);
+                });
+                save_response_to_file(result).unwrap_or_else(|error| {
+                    eprintln!("{:?}", error.to_string());
+                    process::exit(1);
+                });
+            }
         }
         _ => {
             println!("Error: Unknown command '{command}'");
@@ -74,6 +86,59 @@ Examples:
         process::exit(0);
     }
 
+    let request: Request = parse_run_command(args, RUN_HELP_MESSAGE).await;
+    let method: String = request.method.clone();
+
+    match method.as_str() {
+        "GET" | "get" => {
+            let res = request.get().await.unwrap_or_else(|err| {
+                eprintln!("{err}");
+                process::exit(1);
+            });
+            println!("{}", res.as_str());
+            process::exit(0);
+        }
+        "POST" | "post" => {
+            let res = request.post().await.unwrap_or_else(|err| {
+                eprintln!("{err}");
+                process::exit(1);
+            });
+            println!("{}", res.as_str());
+            process::exit(0);
+        }
+        "PUT" | "put" => {
+            let res = request.put().await.unwrap_or_else(|err| {
+                eprintln!("{err}");
+                process::exit(1);
+            });
+            println!("{}", res.as_str());
+            process::exit(0);
+        }
+        "PATCH" | "patch" => {
+            let res = request.patch().await.unwrap_or_else(|err| {
+                eprintln!("{err}");
+                process::exit(1);
+            });
+            println!("{}", res.as_str());
+            process::exit(0);
+        }
+        "DELETE" | "delete" => {
+            let res = request.delete().await.unwrap_or_else(|err| {
+                eprintln!("{err}");
+                process::exit(1);
+            });
+            println!("{}", res.as_str());
+            process::exit(0);
+        }
+        _ => {
+            eprintln!("method is required");
+            println!("{RUN_HELP_MESSAGE}");
+            process::exit(1);
+        }
+    }
+}
+
+fn parse_run_command(args: &[String], help_message: &str) -> impl Future<Output = Request> {
     let mut method: Option<String> = None;
     let mut endpoint: Option<String> = None;
     let mut body: HashMap<String, String> = HashMap::new();
@@ -138,7 +203,7 @@ Examples:
             }
             _ => {
                 eprintln!("Error: Unknown argument '{}'", args[i]);
-                println!("{RUN_HELP_MESSAGE}");
+                println!("{help_message}");
                 process::exit(1);
             }
         }
@@ -146,51 +211,16 @@ Examples:
 
     if method.is_none() {
         eprintln!("Error: --method is required");
-        println!("{RUN_HELP_MESSAGE}");
+        println!("{help_message}");
         process::exit(1);
     }
 
     if endpoint.is_none() {
         eprintln!("Error: --endpoint is required");
-        println!("{RUN_HELP_MESSAGE}");
+        println!("{help_message}");
         process::exit(1);
     }
-    let request_value = Request::new(method.clone().unwrap(), endpoint.unwrap(), body, headers);
-
-    if let Some(mth) = method {
-        match mth.as_str() {
-            "GET" | "get" => {
-                let res = request_value.await.get().await.unwrap_or_else(|err| {
-                    eprintln!("{err}");
-                    process::exit(1);
-                });
-                println!("{}", res.as_str());
-                process::exit(0);
-            }
-            "POST" | "post" => {
-                let res = request_value.await.post().await.unwrap_or_else(|err| {
-                    eprintln!("{err}");
-                    process::exit(1);
-                });
-                println!("{}", res.as_str());
-                process::exit(0);
-            }
-            "DELETE" | "delete" => {
-                let res = request_value.await.delete().await.unwrap_or_else(|err| {
-                    eprintln!("{err}");
-                    process::exit(1);
-                });
-                println!("{}", res.as_str());
-                process::exit(0);
-            }
-
-            _ => println!("Method not allowed yet"),
-        }
-    } else {
-        eprintln!("Error: --method is required");
-        println!("{RUN_HELP_MESSAGE}");
-        process::exit(1);
-    }
+    Request::new(method.clone().unwrap(), endpoint.unwrap(), body, headers)
 }
 
 // async fn handle_request(request: Request) {}
@@ -220,7 +250,6 @@ mod test {
     #[test]
     fn test_initlize_fesi_success() {
         clean_up_dir();
-
         let result = std::panic::catch_unwind(|| {
             initialize_fesi_project();
         });

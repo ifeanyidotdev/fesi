@@ -30,16 +30,18 @@ impl Request {
         }
     }
 
-    pub async fn run(&self) -> Result<String, Error> {
+    pub async fn run(&self) -> anyhow::Result<String, Error> {
         let method = self.method.clone();
         match method.as_str() {
             "GET" => self.get().await,
             "POST" => self.post().await,
+            "PUT" => self.put().await,
             "DELETE" => self.delete().await,
             _ => panic!("Method not allowed"),
         }
     }
-    pub async fn get(&self) -> Result<String, Error> {
+
+    pub async fn get(&self) -> anyhow::Result<String, Error> {
         let mut headers = HeaderMap::new();
 
         let request_h = self.header.clone();
@@ -59,7 +61,7 @@ impl Request {
         let result = response.text().await?;
         Ok(result)
     }
-    pub async fn post(&self) -> Result<String, Error> {
+    pub async fn post(&self) -> anyhow::Result<String, Error> {
         let mut headers = HeaderMap::new();
 
         let request_h = self.header.clone();
@@ -80,7 +82,7 @@ impl Request {
         let result = response.text().await?;
         Ok(result)
     }
-    pub async fn delete(&self) -> Result<String, Error> {
+    pub async fn delete(&self) -> anyhow::Result<String, Error> {
         let mut headers = HeaderMap::new();
         let request_h = self.header.clone();
 
@@ -93,6 +95,48 @@ impl Request {
             .client
             .delete(self.endpoint.clone())
             .headers(headers)
+            .send()
+            .await?;
+
+        let result = response.text().await?;
+        Ok(result)
+    }
+    pub async fn put(&self) -> anyhow::Result<String, Error> {
+        let mut headers = HeaderMap::new();
+
+        let request_h = self.header.clone();
+
+        for (key, value) in request_h.into_iter() {
+            let header_name = HeaderName::from_str(&key).expect("Invalid header name");
+            let header_value = HeaderValue::from_str(&value).expect("Invalid header value");
+            headers.insert(header_name, header_value);
+        }
+        let response = self
+            .client
+            .put(self.endpoint.clone())
+            .headers(headers)
+            .json(&self.body)
+            .send()
+            .await?;
+
+        let result = response.text().await?;
+        Ok(result)
+    }
+    pub async fn patch(&self) -> Result<String, Error> {
+        let mut headers = HeaderMap::new();
+
+        let request_h = self.header.clone();
+
+        for (key, value) in request_h.into_iter() {
+            let header_name = HeaderName::from_str(&key).expect("Invalid header name");
+            let header_value = HeaderValue::from_str(&value).expect("Invalid header value");
+            headers.insert(header_name, header_value);
+        }
+        let response = self
+            .client
+            .patch(self.endpoint.clone())
+            .headers(headers)
+            .json(&self.body)
             .send()
             .await?;
 

@@ -6,6 +6,10 @@ edition = "2024"
 [dependencies]
 reqwest = { version = "0.12", features = ["json"] }
 tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+anyhow = "1.0"
+chrono =  "0.4"
 
 [profile.release]
 opt-level = 3
